@@ -95,7 +95,7 @@ public class GestionDonacionesSangre {
 		///////////////////////////////////////////////////
 
 		// Insertar donación
-		try {			
+		try {
 			PreparedStatement insertDonacionSt = cnx.prepareStatement("""
 					INSERT INTO donacion(id_donacion, nif_donante, cantidad, fecha_donacion)
 					VALUES (seq_donacion.nextval, ?, ?, ?)
@@ -104,15 +104,16 @@ public class GestionDonacionesSangre {
 			insertDonacionSt.setFloat(2, m_Cantidad);
 			insertDonacionSt.setDate(3, m_Fecha_Donacion);
 			insertDonacionSt.executeUpdate();
-		}catch(SQLException ex) {
+		} catch (SQLException ex) {
 			cnx.rollback();
 			cnx.close();
-			// Hemos decidido no usar la clase utils de errores de SGBDOracle y simplemente hardcodearlo...
-			if(ex.getMessage().contains("(HR.DONACION_NIF_DONANTE_FK) violated - parent key not found")) {
+			// Hemos decidido no usar la clase utils de errores de SGBDOracle y simplemente
+			// hardcodearlo...
+			if (ex.getMessage().contains("(HR.DONACION_NIF_DONANTE_FK) violated - parent key not found")) {
 				System.out.println("Hola:" + ex.getMessage());
 				throw new GestionDonacionesSangreException(GestionDonacionesSangreException.DONANTE_NO_EXISTE);
-			}else {
-				throw ex;				
+			} else {
+				throw ex;
 			}
 		}
 
@@ -148,7 +149,7 @@ public class GestionDonacionesSangre {
 		updateReservaSt.setString(2, tipoSangre);
 		updateReservaSt.setInt(3, m_ID_Hospital);
 		int actualizaciones = updateReservaSt.executeUpdate();
-		if(actualizaciones < 1) {
+		if (actualizaciones < 1) {
 			cnx.rollback();
 			cnx.close();
 			throw new GestionDonacionesSangreException(GestionDonacionesSangreException.HOSPITAL_NO_EXISTE);
@@ -166,39 +167,78 @@ public class GestionDonacionesSangre {
 	 * del campo cantidad de la reserva asociada al hospital destino y sumar dicha
 	 * cantidad a la reserva asociada al hospital origen.
 	 */
-	public static void anular_traspaso(int m_ID_Tipo_Sangre, int m_ID_Hospital_Origen, int m_ID_Hospital_Destino, Date m_Fecha_Traspaso) throws SQLException {
+	public static void anular_traspaso(int m_ID_Tipo_Sangre, int m_ID_Hospital_Origen, int m_ID_Hospital_Destino,
+			Date m_Fecha_Traspaso) throws SQLException {
 		PoolDeConexiones pool = PoolDeConexiones.getInstance();
 		Connection cnx = pool.getConnection();
-		
-		PreparedStatement selectTraspasoSt = cnx.prepareStatement("""
-				SELECT id_traspaso, id_hospital_origen, id_hospital_destino, cantidad
-				FROM traspaso
-				WHERE 
-					id_tipo_sangre = ?		AND
-					id_hospital_origen = ?	AND
-					id_hosiptal_destino = ?	AND
-					fecha_traspaso = ?
-				""");
-		selectTraspasoSt.setInt(1, m_ID_Tipo_Sangre);
-		selectTraspasoSt.setInt(2, m_ID_Hospital_Origen);
-		selectTraspasoSt.setInt(3, m_ID_Hospital_Destino);
-		selectTraspasoSt.setDate(4, m_Fecha_Traspaso);
-		ResultSet rs = selectTraspasoSt.executeQuery();
-		// Si no encontramos ese traspaso por el motivo que sea, simplemente se termina.
-		// No necesitamos comprobar nada ,incluso si no existen los valores. Porque no
-		// estamos tocando nada. No debemos borrar nada.
-		if(!rs.next()) {
+
+		try {
+
+			PreparedStatement selectTraspasoSt = cnx.prepareStatement("""
+					SELECT id_traspaso, id_hospital_origen, id_hospital_destino, cantidad
+					FROM traspaso
+					WHERE
+						id_tipo_sangre = ?		AND
+						id_hospital_origen = ?	AND
+						id_hosiptal_destino = ?	AND
+						fecha_traspaso = ?
+					""");
+			selectTraspasoSt.setInt(1, m_ID_Tipo_Sangre);
+			selectTraspasoSt.setInt(2, m_ID_Hospital_Origen);
+			selectTraspasoSt.setInt(3, m_ID_Hospital_Destino);
+			selectTraspasoSt.setDate(4, m_Fecha_Traspaso);
+			ResultSet rs = selectTraspasoSt.executeQuery();
+			// Si no encontramos ese traspaso por el motivo que sea, simplemente se termina.
+			// No necesitamos comprobar nada ,incluso si no existen los valores. Porque no
+			// estamos tocando nada. No debemos borrar nada.
+			if (!rs.next()) {
+				rs.close();
+				selectTraspasoSt.close();
+				cnx.close();
+				return;
+			}
+			// Si hemos encontrado algo llegamos hasta aquí.
+			// Ahora hay que restar en destino, sumar en origen y quitar la transacción.
+			int idTraspaso = rs.getInt("id_traspaso");
+			int idHospitalOrigen = rs.getInt("id_hospital_origen");
+			int idHospitalDestino = rs.getInt("id_hospital_destino");
+			float cantidad = rs.getFloat("cantidad");
+
+			// Restar del destino
+			PreparedStatement restarDestinoSt = cnx.prepareStatement("""
+						UPDATE reserva_hospital
+						SET cantidad = cantidad - ?
+						WHERE id_hospital = ?
+					""");
+			restarDestinoSt.setFloat(1, cantidad);
+			restarDestinoSt.setInt(2, idHospitalDestino);
+			restarDestinoSt.executeUpdate();
+
+			// Sumar al origen
+			PreparedStatement sumarOrigenSt = cnx.prepareStatement("""
+						UPDATE reserva_hospital
+						SET cantidad = cantidad + ?
+						WHERE id_hospital = ?
+					""");
+			sumarOrigenSt.setFloat(1, cantidad);
+			sumarOrigenSt.setInt(2, idHospitalOrigen);
+			sumarOrigenSt.executeUpdate();
+
+			// Borrar el traspaso
+			PreparedStatement borrarTraspasoSt = cnx.prepareStatement("""
+					DELETE FROM traspaso
+					WHERE id_traspaso = ?
+					""");
+			borrarTraspasoSt.setInt(1, idTraspaso);
+			borrarTraspasoSt.executeUpdate();
+			
 			cnx.close();
-			return;
+		} catch (SQLException ex) {
+			cnx.close();
+			throw ex;
 		}
-		// Si hemos encontrado algo llegamos hasta aquí.
-		// Ahora hay que restar en destino, sumar en origen y quitar la transacción.
-		int idTraspaso = rs.getInt("id_traspaso");
-		int idHospitalOrigen = rs.getInt("id_hospital_origen");
-		int idHospitalDestino = rs.getInt("id_hospital_destino");
-		float cantidad = rs.getFloat("cantidad");
+
 		
-		cnx.close();
 	}
 
 	/*
@@ -209,7 +249,63 @@ public class GestionDonacionesSangre {
 	 * hospital, reserva_hospital y tipo_sangre.
 	 */
 	public static void consulta_traspasos(String m_Tipo_Sangre) throws SQLException {
+		PoolDeConexiones pool = PoolDeConexiones.getInstance();
+		Connection cnx = pool.getConnection();
 
+		try {
+
+			PreparedStatement st = cnx.prepareStatement("""
+					SELECT
+					    id_traspaso,
+					    traspaso.cantidad,
+					    fecha_traspaso,
+					    descripcion,
+					    nombre,
+					    localidad,
+					    reserva_hospital.cantidad
+					FROM traspaso
+					JOIN tipo_sangre
+					    ON tipo_sangre.id_tipo_sangre = traspaso.id_tipo_sangre
+					JOIN hospital
+					    ON traspaso.id_hospital_destino = hospital.id_hospital
+					JOIN reserva_hospital
+					    ON traspaso.id_hospital_destino = reserva_hospital.id_hospital
+					WHERE
+						tipo_sangre.descripcion = ?
+					ORDER BY id_hospital_destino, fecha_traspaso
+					""");
+			st.setString(1, m_Tipo_Sangre);
+			ResultSet rs = st.executeQuery();
+
+			// Formateo juapo
+			System.out.println("|id\t|c. traspaso\t|fecha\t\t|sangre\t\t|hospital\t\t\t\t\t|localidad\t\t|reservas");
+			System.out.println(
+					"--------------------------------------------------------------------------------------------------------------------------------------------");
+
+			while (rs.next()) {
+				int id = rs.getInt("id_traspaso");
+				float cantidadTraspaso = rs.getFloat("cantidad");
+				Date fecha = rs.getDate("fecha_traspaso");
+				String desc = rs.getString("descripcion");
+				String nombre = rs.getString("nombre");
+				String localidad = rs.getString("localidad");
+				float cantidadReserva = rs.getFloat("cantidad");
+
+				String s = String.format("|%d\t|%f\t|%s\t|%s\t|%s\t|%s\t\t|%f", id, cantidadTraspaso, fecha, desc,
+						nombre, localidad, cantidadReserva);
+				System.out.println(s);
+			}
+
+			System.out.println(
+					"--------------------------------------------------------------------------------------------------------------------------------------------");
+
+			rs.close();
+			st.close();
+			cnx.close();
+		} catch (SQLException ex) {
+			cnx.close();
+			throw ex;
+		}
 	}
 
 	/*
@@ -260,14 +356,17 @@ public class GestionDonacionesSangre {
 
 			// Donación válida
 			GestionDonacionesSangre.realizar_donacion("12345678A", 0.30f, 1, new Date(Misc.getCurrentDate().getTime()));
-			
+
 			// NIF Inválido
-			// GestionDonacionesSangre.realizar_donacion("AAAAAAAAA", 0.30f, 1, new Date(Misc.getCurrentDate().getTime()));
-		
+			// GestionDonacionesSangre.realizar_donacion("AAAAAAAAA", 0.30f, 1, new
+			// Date(Misc.getCurrentDate().getTime()));
+
 			// Hospital inválido
-			//GestionDonacionesSangre.realizar_donacion("98765432Y", 0.30f, 1337, new Date(Misc.getCurrentDate().getTime()));
-			
-			
+			// GestionDonacionesSangre.realizar_donacion("98765432Y", 0.30f, 1337, new
+			// Date(Misc.getCurrentDate().getTime()));
+
+			// Consultar tipo de sangre
+			GestionDonacionesSangre.consulta_traspasos("Tipo A.");
 
 		} catch (SQLException e) {
 			logger.error(e.getMessage());
@@ -281,3 +380,4 @@ public class GestionDonacionesSangre {
 
 	}
 }
+
