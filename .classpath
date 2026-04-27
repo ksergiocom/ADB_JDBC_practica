@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/c3p0/c3p0-0.9.5.3.jar"/>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/c3p0/hibernate-c3p0-5.4.10.Final.jar"/>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/c3p0/mchange-commons-java-0.2.15.jar"/>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/EclipseLink/eclipselink.jar"/>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/EclipseLink/jpa/jakarta.persistence.source_2.2.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/EclipseLink/jpa/jakarta.persistence_2.2.2.jar"/>
+	<classpathentry kind="lib" path="C:/Users/maxip/OneDrive - Universidad de Burgos/Escritorio/Universidad/Tercer año/SEGUNDO CUATRIMESTRE/Aplicaciones de bases de datos/eclipse/user_lib_JPA/user_lib_JPA/lib/EclipseLink/extension/org.eclipse.persistence.extension_2.7.4.v20190115-ad5b7c6b2a.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
